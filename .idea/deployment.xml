@@ -1,0 +1,28 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project version="4">
+  <component name="PublishConfigData" serverName="nishuang@10.236.11.181:22" remoteFilesAllowedToDisappearOnAutoupload="false">
+    <serverData>
+      <paths name="nishuang">
+        <serverdata>
+          <mappings>
+            <mapping deploy="/ELECRec-main" local="$PROJECT_DIR$" web="/" />
+          </mappings>
+        </serverdata>
+      </paths>
+      <paths name="nishuang@10.236.11.181:22">
+        <serverdata>
+          <mappings>
+            <mapping deploy="/ELECRec-main" local="$PROJECT_DIR$" />
+          </mappings>
+        </serverdata>
+      </paths>
+      <paths name="root@connect.westa.seetacloud.com:35037">
+        <serverdata>
+          <mappings>
+            <mapping local="$PROJECT_DIR$" web="/" />
+          </mappings>
+        </serverdata>
+      </paths>
+    </serverData>
+  </component>
+</project>
