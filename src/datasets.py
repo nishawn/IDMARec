@@ -13,7 +13,7 @@ from utils import neg_sample, nCr
 import copy
 
 
-class ELECRecDataset(Dataset):
+class IDMARecDataset(Dataset):
     def __init__(self, args, user_seq, test_neg_items=None, data_type="train", similarity_model_type="offline"):
         self.args = args
         self.user_seq = user_seq
