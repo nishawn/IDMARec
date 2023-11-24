@@ -636,7 +636,7 @@ class ELECITY(Trainer):
                                         )
                                         cl_losses.append(self.args.intent_cf_weight * cl_loss3)
 
-                joint_loss = self.args.gen_loss_weight * gen_loss + self.args.dis_loss_weight * dis_loss + cl_loss * 0.6
+                joint_loss = self.args.gen_loss_weight * gen_loss + self.args.dis_loss_weight * dis_loss + cl_loss * 0.5
 
 
 
