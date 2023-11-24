@@ -14,7 +14,7 @@ import argparse
 
 from torch.utils.data import DataLoader, RandomSampler, SequentialSampler
 
-from datasets import ELECRecDataset
+from datasets import IDMARecDataset
 
 from train_intent import ELECITY
 from models import SASRecModel, SASRecUserPropmtModel, SASRecAttributeModel, SASRecUserItemPromptModel
@@ -52,16 +52,16 @@ def main():
     # system args
     parser.add_argument('--data_dir', default='../data/', type=str)
     parser.add_argument('--output_dir', default='output/', type=str)
-    parser.add_argument('--data_name', default='Sports_and_Outdoors', type=str)
+    parser.add_argument('--data_name', default='Yelp', type=str)
 
     parser.add_argument('--do_eval', action='store_true')
-    parser.add_argument('--model_idx', default=2, type=int, help="model idenfier 10, 20, 30...")
-    parser.add_argument("--gpu_id", type=str, default="0", help="gpu_id")
+    parser.add_argument('--model_idx', default=1, type=int, help="model idenfier 10, 20, 30...")
+    parser.add_argument("--gpu_id", type=str, default="1", help="gpu_id")
     parser.add_argument('--training_data_ratio', default=1.0, type=float, \
                         help="percentage of training samples used for training - robustness analysis")
     parser.add_argument('--noise_ratio', default=0.0, type=float, \
                         help="percentage of negative interactions in a sequence - robustness analysis")
-    parser.add_argument("--model_name", default='ELECRec', type=str)
+    parser.add_argument("--model_name", default='IDMARec', type=str)
 
     parser.add_argument(
         "--augment_type",
@@ -121,7 +121,7 @@ def main():
     parser.add_argument("--gen_initializer_range", type=float, default=0.02)
     parser.add_argument("--gen_loss_weight", type=float, default=1.0)
     parser.add_argument('--gen_loss_type', default="full-softmax", type=str)
-    parser.add_argument("--sample_ratio", type=float, default=0.6, \
+    parser.add_argument("--sample_ratio", type=float, default=0.2, \
                         help="weight of contrastive learning task")
 
     parser.add_argument('--alpha', default=0.5, type=float, help='calculate position importance')
@@ -140,7 +140,7 @@ def main():
     parser.add_argument("--dis_attention_probs_dropout_prob", type=float, default=0.5, help="attention dropout p")
     parser.add_argument("--dis_hidden_dropout_prob", type=float, default=0.5, help="hidden dropout p")
     parser.add_argument("--dis_initializer_range", type=float, default=0.02)
-    parser.add_argument("--dis_loss_weight", type=float, default=0.7)
+    parser.add_argument("--dis_loss_weight", type=float, default=0.2)
     parser.add_argument('--dis_loss_type', default="bce", type=str)
     parser.add_argument('--dis_opt_versioin', default="full", type=str)
     parser.add_argument('--project_type', default="affine", type=str, \
@@ -194,7 +194,7 @@ def main():
 
     # save model args
     args_str = f'{args.model_name}-{args.data_name}-{args.model_idx}'
-    args.log_file = os.path.join(args.output_dir, args_str + 'sample-etc-hp1.txt')
+    args.log_file = os.path.join(args.output_dir, args_str + 'yelp.txt')
 
     show_args_info(args)
 
@@ -209,23 +209,23 @@ def main():
     args.checkpoint_path = os.path.join(args.output_dir, checkpoint)
 
     # training data
-    cluster_dataset = ELECRecDataset(args,
+    cluster_dataset = IDMARecDataset(args,
                                      user_seq[:int(len(user_seq) * args.training_data_ratio)], \
                                      data_type='train')
     cluster_sampler = SequentialSampler(cluster_dataset)
     cluster_dataloader = DataLoader(cluster_dataset, sampler=cluster_sampler, batch_size=args.batch_size)
 
-    train_dataset = ELECRecDataset(args,
+    train_dataset = IDMARecDataset(args,
                                    user_seq[:int(len(user_seq) * args.training_data_ratio)], \
                                    data_type='train')
     train_sampler = RandomSampler(train_dataset)
     train_dataloader = DataLoader(train_dataset, sampler=train_sampler, batch_size=args.batch_size)
 
-    eval_dataset = ELECRecDataset(args, user_seq, data_type='valid')
+    eval_dataset = IDMARecDataset(args, user_seq, data_type='valid')
     eval_sampler = SequentialSampler(eval_dataset)
     eval_dataloader = DataLoader(eval_dataset, sampler=eval_sampler, batch_size=args.batch_size)
 
-    test_dataset = ELECRecDataset(args, user_seq, data_type='test')
+    test_dataset = IDMARecDataset(args, user_seq, data_type='test')
     test_sampler = SequentialSampler(test_dataset)
     test_dataloader = DataLoader(test_dataset, sampler=test_sampler, batch_size=args.batch_size)
 
@@ -284,7 +284,7 @@ def main():
         scores, result_info = trainer.test(0, full_sort=True)
 
     else:
-        print(f'Train ELECRec')
+        print(f'Train IDMARec')
         early_stopping = EarlyStopping(args.checkpoint_path, patience=40, verbose=True)
         for epoch in range(args.epochs):
             args.train_matrix = valid_rating_matrix
