@@ -20,7 +20,6 @@ class Random(object):
         # randint generate int x in range: a <= x <= b
         augment_method_idx = random.randint(0, len(self.data_augmentation_methods) - 1)
         augment_method = self.data_augmentation_methods[augment_method_idx]
-        # print(augment_method.__class__.__name__) # debug usage
         return augment_method(sequence)
 
 

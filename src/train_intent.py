@@ -11,7 +11,6 @@ from torch.utils.data import DataLoader, RandomSampler
 import itertools
 
 from models import KMeans
-# from models import KMeans_Pytorch as KMeans
 
 from utils import recall_at_k, ndcg_k, get_metric, get_user_seqs, nCr
 from modules import NCELoss, NTXent, SupConLoss, PCLoss
@@ -79,11 +78,8 @@ class Trainer:
         self.eval_dataloader = eval_dataloader
         self.test_dataloader = test_dataloader
 
-        # projection on discriminator output
-        # self.data_name = self.args.data_name
         betas = (self.args.adam_beta1, self.args.adam_beta2)
-        # self.optim = Adam(list(self.generator.parameters()) + list(self.discriminator.parameters()), lr=self.args.lr,
-        #                   betas=betas, weight_decay=self.args.weight_decay)
+
         self.optim_A = Adam(list(self.generator_A.parameters()) + list(self.discriminator_A.parameters()), lr=self.args.lr,
                            betas=betas, weight_decay=self.args.weight_decay)
         self.optim_B = Adam(list(self.generator_B.parameters()) + list(self.discriminator_B.parameters()), lr=self.args.lr,
@@ -164,26 +160,7 @@ class Trainer:
         neg_ids = neg_ids.view(-1, self.args.max_seq_length)
         # replace the sampled positive ids with uniform sampled items
         return neg_ids
-    #
-    # def sample_from_generator(self, seq_out, pos_ids, generator):
-    #     seq_emb = seq_out.view(-1, self.args.hidden_size)
-    #     istarget = (pos_ids > 0).view(pos_ids.size(0) * generator.args.max_seq_length).float()  # [batch*seq_len]
-    #
-    #     K = int(self.args.item_size * self.args.item_sample_ratio) - 1
-    #     neg_ids = random.sample([i for i in range(1, self.args.item_size)], K)
-    #     neg_ids = torch.tensor(neg_ids, dtype=torch.long).to(self.device)
-    #     neg_emb = generator.item_embeddings(neg_ids)
-    #     full_probability = torch.matmul(seq_emb, neg_emb.transpose(0, 1))
-    #     full_probability = self.m(full_probability) ** self.args.prob_power
-    #     sampled_neg_ids = self._generate_sample(full_probability, pos_ids, neg_ids, 1)
-    #
-    #     # replace certain percentage of items as absolute positive items
-    #     replace_idx = (torch.rand(size=(pos_ids.size(0), pos_ids.size(1))) < (1 - self.args.sample_ratio))
-    #     sampled_neg_ids[replace_idx] = pos_ids[replace_idx]
-    #     mask_idx = torch.logical_not(replace_idx).float()
-    #     pos_idx = (pos_ids == sampled_neg_ids).view(pos_ids.size(0) * generator.args.max_seq_length).float()
-    #     neg_idx = (pos_ids != sampled_neg_ids).view(pos_ids.size(0) * generator.args.max_seq_length).float()
-    #     return sampled_neg_ids, pos_idx, neg_idx, mask_idx, istarget
+
 
     def sample_from_generator(self, seq_out_A, seq_out_B, pos_ids, generator_A, generator_B):
         # 同时对两个generator进行采样，从而确保对应的item对比
@@ -268,7 +245,7 @@ class Trainer:
         seq_emb_B = seq_out_B.view(-1, self.args.hidden_size)
         pos_logits_A = torch.sum((pos_A * seq_emb_A) / self.args.temperature, -1)  # [batch*seq_len]
         pos_logits_B = torch.sum((pos_B * seq_emb_B) / self.args.temperature, -1)
-        # istarget = (pos_ids > 0).view(pos_ids.size(0) * generator.args.max_seq_length).float()  # [batch*seq_len]
+
 
         # handle multiple negatives
         total_neg_loss = 0.0
@@ -282,27 +259,6 @@ class Trainer:
             loss = self.loss_fct(logits, torch.squeeze(pos_ids.view(-1)))
         return loss
 
-    # def cycle_cross_entropy(self, seq_out_a, seq_out_b, generator_C,istarget):
-    #     seq_emb_a = generator_C.item_embeddings(seq_out_a)
-    #     seq_emb_b = generator_C.item_embeddings(seq_out_b)
-    #     neg_logits_a = torch.sum((seq_emb_a) / self.args.temperature, -1)
-    #     neg_logits_b = torch.sum((seq_emb_b) / self.args.temperature, -1)
-    #
-    #
-    #     prob_score = torch.sigmoid(neg_logits_b - neg_logits_a) + 1e-24
-    #     if self.args.dis_opt_versioin == 'mask_only':
-    #         total_pos_loss = torch.log(prob_score)
-    #         total_neg_loss = torch.log(1 - prob_score)
-    #     else:
-    #         total_pos_loss = torch.log(prob_score)
-    #         total_neg_loss = torch.log(1 - prob_score)
-    #     if self.args.dis_loss_type in ['bce']:
-    #         loss = torch.sum(
-    #             - total_pos_loss -
-    #             total_neg_loss
-    #         )/torch.sum(istarget)
-    #     return loss
-    #
 
 
 
@@ -359,7 +315,6 @@ class ELECITY(Trainer):
             cl_sequence_output_B = torch.mean(cl_sequence_output, dim=1, keepdim=False)
         cl_sequence_flatten = cl_sequence_output.view(cl_batch.shape[0], -1)
         cl_sequence_flatten_B = cl_sequence_output_B.view(cl_batch.shape[0], -1)
-        # cf_output = self.projection(cf_sequence_flatten)
         batch_size = cl_batch.shape[0] // 2
         cl_output_slice = torch.split(cl_sequence_flatten, batch_size)
         cl_output_slice_B = torch.split(cl_sequence_flatten_B, batch_size)
@@ -445,9 +400,7 @@ class ELECITY(Trainer):
                 for i, cluster in tqdm(enumerate(self.clusters), total=len(self.clusters)):
                     cluster.train(kmeans_training_data)
                     self.clusters[i] = cluster
-                    # print(self.clusters[i])
-                # clean memory
-                # del kmeans_training_data
+
                 import gc
 
                 gc.collect()
@@ -487,8 +440,7 @@ class ELECITY(Trainer):
                         new_rec_batch.append(new_neg_list)
                     else:
                         new_rec_batch.append(t.to(self.device))
-                # try:
-                # rec_batch = tuple(t.to(self.device) for t in rec_batch)
+
                 _, input_ids, target_pos, target_neg, _ = new_rec_batch
 
                 # ---------- generator task ---------------#
@@ -514,9 +466,6 @@ class ELECITY(Trainer):
                 disc_logits_A = self.discriminator_A(sampled_neg_ids_A)
                 disc_logits_B = self.discriminator_B(sampled_neg_ids_B)
 
-
-                # dis_loss = self.discriminator_cross_entropy(disc_logits_A, pos_idx_A, neg_idx_A, mask_idx_A, istarget_A, self.discriminator_A)\
-                #            + self.discriminator_cross_entropy(disc_logits_B,pos_idx,neg_idx,mask_idx,istarget, self.discriminator_B)
 
                 dis_loss = self.discriminator_cross_entropy(disc_logits_A, pos_idx_A, neg_idx_A, mask_idx, istarget_A,
                                                             self.discriminator_A) \
@@ -895,10 +844,10 @@ class CoDistSAModelTrainer(Trainer):
         # [batch seq_len hidden_size]
         activation = nn.ELU()
         pos_mean_emb = self.model.item_mean_embeddings(pos_ids)
-        # pos_mean_emb = nn.functional.normalize(self.model.item_mean_embeddings(pos_ids))
+
         pos_cov_emb = activation(self.model.item_cov_embeddings(pos_ids)) + 1
         neg_mean_emb = self.model.item_mean_embeddings(neg_ids)
-        # neg_mean_emb = nn.functional.normalize(self.model.item_mean_embeddings(neg_ids))
+
         neg_cov_emb = activation(self.model.item_cov_embeddings(neg_ids)) + 1
 
         # [batch*seq_len hidden_size]
@@ -932,18 +881,7 @@ class CoDistSAModelTrainer(Trainer):
         elu_activation = torch.nn.ELU()
         test_item_mean_emb = self.discriminator_B.item_mean_embeddings.weight
         test_item_cov_emb = elu_activation(self.discriminator_B.item_cov_embeddings.weight) + 1
-        # test_item_mean_emb = nn.functional.normalize(self.model.item_mean_embeddings.weight)
-        # test_item_cov_emb = nn.functional.normalize(elu_activation(self.model.item_cov_embeddings.weight) + 1)
-        # num_items, emb_size = test_item_cov_emb.shape
 
-        # seq_mean_out = seq_mean_out.unsqueeze(1).expand(-1, num_items, -1).reshape(-1, emb_size)
-        # seq_cov_out = seq_cov_out.unsqueeze(1).expand(-1, num_items, -1).reshape(-1, emb_size)
-
-        # if args.distance_metric == 'wasserstein':
-        #    return wasserstein_distance(seq_mean_out, seq_cov_out, test_item_mean_emb, test_item_cov_emb)
-        # else:
-        #    return kl_distance(seq_mean_out, seq_cov_out, test_item_mean_emb, test_item_cov_emb)
-        # return d2s_1overx(wasserstein_distance_matmul(seq_mean_out, seq_cov_out, test_item_mean_emb, test_item_cov_emb))
         return wasserstein_distance_matmul(seq_mean_out, seq_cov_out, test_item_mean_emb, test_item_cov_emb)
 
     def iteration(self, epoch, dataloader, full_sort=False, train=True):
@@ -1045,20 +983,11 @@ class CoDistSAModelTrainer(Trainer):
                     cl_individual_avg_losses[i] += cl_loss.item()
                     cl_sum_avg_loss += self.args.cf_weight * cl_loss.item()
 
-                # rec_avg_loss += rec_loss.item()
-                # rec_cur_loss = rec_loss.item()
-                # total_avg_loss += loss.item()
-                # rec_avg_auc += batch_auc.item()
-                # rec_avg_pvn_loss += self.args.pvn_weight * pvn_loss.item()
 
             post_fix = {
                 "epoch": epoch,
                 "total_avg_loss": '{:.4f}'.format(joint_avg_loss / len(rec_data_iter)),
-                # "rec_avg_loss": '{:.4f}'.format(rec_avg_loss / len(rec_data_iter)),
-                # "rec_cur_loss": '{:.4f}'.format(rec_cur_loss),
-                # "rec_avg_auc": '{:.6f}'.format(rec_avg_auc / len(rec_data_iter)),
-                # "rec_avg_pvn_loss": '{:.6f}'.format(rec_avg_pvn_loss / len(rec_data_iter)),
-                # "cl_avg_loss": '{:.4f}'.format(cl_sum_avg_loss / (len(rec_data_iter)*self.total_augmentaion_pairs)),
+
             }
             if (epoch + 1) % self.args.log_freq == 0:
                 print(str(post_fix), flush=True)
